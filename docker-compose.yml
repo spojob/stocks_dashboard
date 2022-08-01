@@ -1,0 +1,85 @@
+version: '3.7'
+services:
+  timescaledb_timeseries:
+    container_name: timescaledb_timeseries
+    image: timescale/timescaledb:latest-pg14
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
+      PGPASSWORD: password
+      POSTGRES_DB: postgres
+    ports:
+      - '5432:5432'
+    networks:
+      - mynet
+
+  redis_pubsub:
+    container_name: redis_pubsub
+    image: redis:latest
+    command: --port 6380
+    restart: unless-stopped
+    ports:
+      - "6380:6380"
+    networks:
+      - mynet
+
+  redis_timeseries:
+    container_name: redis_timeseries
+    image: redis/redis-stack:latest
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - mynet
+
+  storage_fillers:
+    container_name: storage_fillers
+    build: ./storage_fillers/timeseries_filler
+    restart: unless-stopped
+    depends_on:
+      - redis_pubsub
+      - redis_timeseries
+      - timescaledb_timeseries
+    networks:
+      - mynet
+
+  fake_scrapper:
+    container_name: fake_scrapper
+    build: ./scrappers/fake_scrapper
+    restart: unless-stopped
+    depends_on:
+      - storage_fillers
+      - redis_pubsub
+      - redis_timeseries
+      - timescaledb_timeseries
+    networks:
+      - mynet
+
+  api:
+    container_name: stocks_api_service
+    build: ./services/stock_prices
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      - storage_fillers
+      - redis_pubsub
+      - timescaledb_timeseries
+    networks:
+      - mynet
+
+  stocks_dashboard:
+    container_name: stocks_dashboard_service
+    build: ./services/dashboard
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - storage_fillers
+    networks:
+      - mynet
+
+networks:
+  mynet:
+    name: mynet

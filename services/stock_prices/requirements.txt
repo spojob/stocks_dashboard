@@ -1,0 +1,8 @@
+sqlalchemy
+fastapi
+uvicorn[standard]
+gunicorn
+asyncpg
+redis
+orjson
+pydantic
