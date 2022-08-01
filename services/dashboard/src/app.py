@@ -46,6 +46,9 @@ app = dash.Dash(
         "content": "width=device-width, initial-scale=1"
     }],
 )
+
+server = app.server
+
 app.layout = html.Div(
     [
         html.Div(
